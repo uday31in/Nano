@@ -54,6 +54,10 @@
   <ItemGroup>
     <None Include="WinPEUnattendXml.ps1" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="Gen2WithCredential.xml" />
+    <Content Include="Gen2NoCredential.xml" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>CD "$(ProjectDir)"

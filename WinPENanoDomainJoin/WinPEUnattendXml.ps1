@@ -51,7 +51,7 @@ else
 }
 
 
-$offlinedomainblob = [ConsoleApplication1.Program]::WinPE_DJoin( $user,$domain,$password , $machinename)
+$offlinedomainblob = [ECGCAT.WinPENanoDomainJoin]::WinPE_DJoin( $user,$domain,$password , $machinename)
 
 Write-Host "Domain Blob Created Successfully: $offlinedomainblob"
 
