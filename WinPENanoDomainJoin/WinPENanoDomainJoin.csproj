@@ -48,8 +48,21 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="post-command.ps1" />
+    <None Include="WinPENanoDomainJoin.ps1" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="WinPEUnattendXml.ps1" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>CD "$(ProjectDir)"
+IF EXIST post-command.ps1 (
+
+powershell.exe -NoLogo -ExecutionPolicy ByPass -NonInteractive -Command .'$(ProjectDir)post-command.ps1' -ProjectDir:'$(ProjectDir)' -ConfigurationName:'$(ProjectDir)WinPENanoDomainJoin.cs' -TargetDir:'$(ProjectDir)' -TargetFileName:'$(ProjectDir)WinPENanoDomainJoin.ps1'
+
+)</PostBuildEvent>
+  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
