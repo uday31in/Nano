@@ -1,0 +1,7 @@
+D:\repo\Nano\WinPENanoDomainJoin\WinPENanoDomainJoin\bin\Debug\WinPENanoDomainJoin.exe.config
+D:\repo\Nano\WinPENanoDomainJoin\bin\Debug\WinPENanoDomainJoin.exe.config
+D:\repo\Nano\WinPENanoDomainJoin\bin\Debug\WinPENanoDomainJoin.exe
+D:\repo\Nano\WinPENanoDomainJoin\bin\Debug\WinPENanoDomainJoin.pdb
+D:\repo\Nano\WinPENanoDomainJoin\obj\Debug\WinPENanoDomainJoin.csprojResolveAssemblyReference.cache
+D:\repo\Nano\WinPENanoDomainJoin\obj\Debug\WinPENanoDomainJoin.exe
+D:\repo\Nano\WinPENanoDomainJoin\obj\Debug\WinPENanoDomainJoin.pdb
