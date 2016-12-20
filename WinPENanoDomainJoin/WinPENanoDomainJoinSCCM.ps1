@@ -19,7 +19,6 @@ namespace ECGCAT
 
         [System.Runtime.InteropServices.StructLayoutAttribute(System.Runtime.InteropServices.LayoutKind.Sequential)]
         public class NetsetupProvisoningParams
-
         {
 
             // Version 1 fields  
@@ -27,49 +26,31 @@ namespace ECGCAT
             public uint dwVersion;
 
             [MarshalAs(UnmanagedType.LPWStr)]
-
             public string lpDomain;
 
             [MarshalAs(UnmanagedType.LPWStr)]
-
             public string lpHostName;
 
             [MarshalAs(UnmanagedType.LPWStr)]
-
             public string lpMachineAccountOU;
 
             [MarshalAs(UnmanagedType.LPWStr)]
-
             public string lpDcName;
 
-
-
             public uint dwProvisionOptions;
-
-
-
-            //[MarshalAs(UnmanagedType.LPArray, ArraySubType=UnmanagedType.LPWStr, SizeParamIndex=7)]  
-
-            //public string[] aCertTemplateNames;  
 
             public IntPtr aCertTemplateNames;  // hack until correct MarshalAs setting is figured out  
 
             public uint cCertTemplateNames;
 
-
-
             //[MarshalAs(UnmanagedType.LPWStr)]  
-
             //public string[] aMachinePolicyNames;  
 
             public IntPtr aMachinePolicyNames;  // hack until correct MarshalAs setting is figured out  
 
             public uint cMachinePolicyNames;
 
-
-
             //[MarshalAs(UnmanagedType.LPWStr)]  
-
             //public string[] aMachinePolicyPaths;  
 
             public IntPtr aMachinePolicyPaths;  // hack until correct MarshalAs setting is figured out  
@@ -77,19 +58,15 @@ namespace ECGCAT
             public uint cMachinePolicyPaths;
 
 
-
             // Version 2 fields  
 
             [MarshalAs(UnmanagedType.LPWStr)]
-
             public string lpNetbiosName;
 
             [MarshalAs(UnmanagedType.LPWStr)]
-
             public string lpSiteName;
 
             [MarshalAs(UnmanagedType.LPWStr)]
-
             public string lpPrimaryDNSDomain;
 
         }
@@ -113,10 +90,11 @@ namespace ECGCAT
              out string ppPackageText // should be out - not needed for now  
          );
 
-            }
+    }
 
     public class AdvApi32
     {
+
         [DllImport("advapi32.DLL", SetLastError = true)]
         public static extern bool LogonUser(string lpszUsername, string lpszDomain, string lpszPassword, int dwLogonType, int dwLogonProvider, out IntPtr phToken);
 
@@ -124,6 +102,7 @@ namespace ECGCAT
         public extern static bool DuplicateToken(IntPtr ExistingTokenHandle, int SECURITY_IMPERSONATION_LEVEL, out IntPtr DuplicateTokenHandle);
         public enum LogonTypes
         {
+
             /// <summary>
             /// This logon type is intended for users who will be interactively using the computer, such as a user being logged on  
             /// by a terminal server, remote shell, or similar process.
@@ -179,6 +158,7 @@ namespace ECGCAT
 
         public enum LogonProvider
         {
+
             /// <summary>
             /// Use the standard logon provider for the system. 
             /// The default security provider is negotiate, unless you pass NULL for the domain name and the user name 
@@ -193,6 +173,7 @@ namespace ECGCAT
 
         public enum SecurityImpersonationLevel : int
         {
+
             /// <summary>
             /// The server process cannot obtain identification information about the client, 
             /// and it cannot impersonate the client. It is defined with no value given, and thus, 
@@ -235,32 +216,23 @@ namespace ECGCAT
 
     public class WinPENanoDomainJoin
     {
+
         public static string WinPE_DJoin(String machinename, String domain, String username, String password, String ou = null)
         {
+
             WindowsIdentity winId = WindowsIdentity.GetCurrent();
-            //Console.WriteLine("Current User Identity : {0}", winId.Name);
-            //if (winId != null)
-            //{
-            //    if (string.Compare(winId.Name, username, true) == 0)
-            //    {
-            //        return null;
-            //    }
-            //}
 
             //define the handles
             IntPtr existingTokenHandle = IntPtr.Zero;
             IntPtr duplicateTokenHandle = IntPtr.Zero;
-
+          
             try
             {
                 //get a security token
-                //Console.WriteLine("Before Calling AdvApi32.LogonUser");
-
                 bool isOkay = AdvApi32.LogonUser(username, domain, password,
                     (int)AdvApi32.LogonTypes.LOGON32_LOGON_NEW_CREDENTIALS,
                     (int)AdvApi32.LogonProvider.LOGON32_PROVIDER_WINNT50,
                     out existingTokenHandle);
-                //Console.WriteLine("After Calling AdvApi32.LogonUser");
 
                 if (!isOkay)
                 {
@@ -271,13 +243,10 @@ namespace ECGCAT
                 }
 
                 // copy the token
-                //Console.WriteLine("Before Calling AdvApi32.DuplicateToken");
-
                 isOkay = AdvApi32.DuplicateToken(existingTokenHandle,
                     (int)AdvApi32.SecurityImpersonationLevel.SecurityImpersonation,
                     out duplicateTokenHandle);
 
-                //Console.WriteLine("After Calling AdvApi32.DuplicateToken");
                 if (!isOkay)
                 {
                     int lastWin32Error = Marshal.GetLastWin32Error();
@@ -285,56 +254,29 @@ namespace ECGCAT
                     Kernel32.CloseHandle(existingTokenHandle);
                     throw new Exception("DuplicateToken Failed: " + lastWin32Error + " - " + lastError);
                 }
+
                 // create an identity from the token
-
-
-                //Console.WriteLine("Before Calling AdvApi32.ImpersonateLoggedOnUser(duplicateTokenHandle)");
                 AdvApi32.ImpersonateLoggedOnUser(duplicateTokenHandle);
-                //Console.WriteLine("After Calling AdvApi32.ImpersonateLoggedOnUser(duplicateTokenHandle)");
-                //Console.WriteLine("After AdvApi32.ImpersonateLoggedOnUser User Identity : {0}", winId.Name);
-
-                
 
                 Netapi32.NetsetupProvisoningParams provisioningParams = new Netapi32.NetsetupProvisoningParams();
                 provisioningParams.dwVersion = 1;
                 provisioningParams.lpDomain = domain;
                 provisioningParams.lpHostName = machinename;
+                provisioningParams.lpMachineAccountOU = ou;
                 provisioningParams.dwProvisionOptions = 2;
-                provisioningParams.lpMachineAccountOU = organizationalunit;
 
-                //IntPtr blob = new IntPtr();
-                //StringBuilder blob = new StringBuilder();
                 String blob = String.Empty;
-             
-                //working - int result = Netapi32.NetCreateProvisioningPackage(provisioningParams, out a, out b, blob);
 
                 int result = Netapi32.NetCreateProvisioningPackage(provisioningParams, IntPtr.Zero, IntPtr.Zero, out blob);
 
-                //string str = Marshal.PtrToStringAuto(blobptr);
-
-
-                //Console.WriteLine("Domain Blob: {0}", blob);
-                //Console.WriteLine("Before Calling WindowsIdentity(duplicateTokenHandle)");
                 WindowsIdentity newId = new WindowsIdentity(duplicateTokenHandle);
 
-                //Console.WriteLine("After Calling WindowsIdentity(duplicateTokenHandle)");
-
-                //Console.WriteLine("Before Calling newId.Impersonate()");
-
                 WindowsImpersonationContext impersonatedUser = newId.Impersonate();
-
-
-                //Console.WriteLine("After Calling newId.Impersonate()");
-                //Console.WriteLine("After Impersonation User Identity : {0}", winId.Name);
-
-                //return impersonatedUser;
 
                 return blob;
             }
             finally
             {
-
-                //Console.WriteLine("Inside Finally");
                 //free all handles
                 if (existingTokenHandle != IntPtr.Zero)
                 {
@@ -346,97 +288,31 @@ namespace ECGCAT
                 }
             }
         }
-
-        static void Main(string[] args)
-        {
-            Console.WriteLine("{0}",WinPE_DJoin(username: args[0],password: args[1], machinename:"NetSetup02"));
-
-            Console.ReadLine();
-        }
     }
 }
 '@
-$result = Add-Type -TypeDefinition $Source -Language CSharp
 
-#Region Reading Credential for Domain Join
+Add-Type -TypeDefinition $source -Language CSharp |
+    Out-Null
 
-#$filename = "C:\RemoteInstall\WdsClientUnattend\Gen2NoCredential.xml"
-#$filename = "C:\RemoteInstall\WdsClientUnattend\Gen2NoCredNoComputer.xml"
-$filename = "x:\sources\wdsunattend\wdsunattend.xml"
-Write-host "Reading Domain Join Information from $filename"
+$machinename = $args[0]
+$domain = $args[1]
+$username = $args[2]
+$password = $args[3]
+$ou = $args[4]
+$OSDisk = $args[5]
 
-$xml = New-Object -TypeName System.Xml.XmlDocument
-$xml.Load($filename)
-
-$offlineUnattendedJoin = (($xml.unattend.settings | Where-Object {$_.pass -eq "specialize"}).component | Where-Object {$_.name -eq "Microsoft-Windows-UnattendedJoin"})
-
-if($offlineUnattendedJoin -ne $null)
-{
-
-    Write-Host "Using Cashed Credential from $filename"
-
-    $offlineUnattendedJoin.Identification
-
-    $user = $offlineUnattendedJoin.Identification.Credentials.Username
-    $domain = $offlineUnattendedJoin.Identification.Credentials.Domain
-    $password = $offlineUnattendedJoin.Identification.Credentials.Password
-
-
+try {
+    $offlinedomainblob = [ECGCAT.WinPENanoDomainJoin]::WinPE_DJoin(
+        $machinename,
+        $domain,
+        $username,
+        $password, 
+        $ou
+    )
+} catch {
+    throw $_
 }
-else
-{
-    Write-Host "No Credentials Found in $filename"
-    $credential = Get-Credential -Message "Enter Domain Credentials To Domain Join" 
-
-    $user = $credential.GetNetworkCredential().username 
-    $domain = $credential.GetNetworkCredential().Domain 
-    $password = $credential.GetNetworkCredential().password
-
-    
-}
-
-
-$shellsetup = (($xml.unattend.settings | Where-Object {$_.pass -eq "specialize"}).component | Where-Object {$_.name -eq "Microsoft-Windows-Shell-Setup"})
-
-if($shellsetup -ne $null)
-{
-    [string]$machinename = $shellsetup.ComputerName
-    
-    if($machinename -eq [string]::Empty)
-    {
-        Write-Host "No ComputerName Found in $filename"
-        $machinename = Read-Host "Domain Computername"
-    }
-    
-    Write-Host "Using ComputerName: $machinename"
-
-    #$machinename = 'Nano#'
-    if($machinename.Contains('#'))
-    {
-        $sb = [System.Text.StringBuilder] $machinename
-        ([regex]::Matches($machinename, "#" )) |% {
-            
-           $sb[$_.Index] = (Get-Random -Minimum 0 -Maximum 10).ToString()
-        }
-
-        [int]$length = ([regex]::Matches($machinename, "#" )).count
-
-        #$random = Get-Random -Minimum ([int]([math]::pow(10, ($length-1)))) -Maximum ([int](([math]::pow(10,$length))))
-        $machinename = $sb.ToString()
-         Write-Host "Using ComputerName: $machinename"
-    }
-   
-
-}
-
-$offlinedomainblob = [ECGCAT.WinPENanoDomainJoin]::WinPE_DJoin(
-    $machinename,
-    $domain,
-    $username,
-    $password, 
-    $null
-)
-Write-Host "Domain Blob Created Successfully: $offlinedomainblob"
 
 [string]$winpedomainjoin = @"
 <?xml version="1.0" encoding="utf-8"?>
@@ -453,50 +329,31 @@ Write-Host "Domain Blob Created Successfully: $offlinedomainblob"
 </unattend>
 "@ 
 
+try {
+    $winpedomainjoinxml = New-Object -TypeName System.Xml.XmlDocument
+    $winpedomainjoinxml.LoadXml(
+        $winpedomainjoin
+    )
 
+    $wrt = New-Object -TypeName System.XML.XMLTextWriter(
+        (Join-Path -Path "$env:SystemDrive" -ChildPath "winpedomainjoin.xml"), 
+        New-Object -TypeName System.Text.UTF8Encoding(
+            $false
+        )
+    )
+    $wrt.Formatting = "Indented"
 
-$winpedomainjoinxml = New-Object -TypeName System.Xml.XmlDocument
-$winpedomainjoinxml.LoadXml($winpedomainjoin)
+    $winpedomainjoinxml.Save(
+        $wrt
+    )
 
-$enc = New-Object System.Text.UTF8Encoding( $false )
-$wrt = New-Object System.XML.XMLTextWriter((join-path -path "$env:SystemDrive" -ChildPath "winpedomainjoin.xml"), $enc )
-$wrt.Formatting = 'Indented'
-$winpedomainjoinxml.Save($wrt)
-$wrt.close()
+    $wrt.Close()
 
-Write-Host "WinPE Domain Join Unattend File Created Successfully at " (join-path -path "$env:SystemDrive" -ChildPath "winpedomainjoin.xml")
+    $installVolume = $OSDisk -replace ":"
 
-Write-Host "Applying Unattend File"
-
-$InstallVolume = (get-volume |? {$_.FileSystem -eq 'NTFS'} | sort-object SizeRemaining -Descending | select -First 1).DriveLetter
-
-if(Test-Path ($InstallVolume  + ":\windows"))
-{
-    Write-Host "Applying Unattend File at " ("$InstallVolume" + ":\") 
-    Apply-WindowsUnattend -UnattendPath (join-path -path "$env:SystemDrive" -ChildPath "winpedomainjoin.xml") -Path ("$InstallVolume" + ":\")
-
+    if (Test-Path (Join-Path -Path $installVolume -ChildPath ":\Windows")) {
+        Apply-WindowsUnattend -UnattendPath ( Join-Path -Path "$env:SystemDrive" -ChildPath "winpedomainjoin.xml" ) -Path ( "${installVolume}:\" )
+    }
+} catch {
+    throw $_  
 }
-else
-{
-    $vhdpath = Get-ChildItem ("$InstallVolume" + ":\WindowsImages") | Sort-Object -Descending LastWriteTime | select -First 1
-    Write-Host "Looking for VHD at $($vhdpath.Fullname)"
-
-    $vhd = Get-ChildItem $vhdpath.pspath | select -First 1 
-    Write-Host "Using $($vhd.fullname)"
-
-    $offline = mkdir ("$InstallVolume" + ":\offline")
-
-    Mount-WindowsImage -Path $offline.FullName -ImagePath $vhd.fullname -Index:1
-
-    Apply-WindowsUnattend -Path $offline.FullName -UnattendPath (join-path -path "$env:SystemDrive" -ChildPath "winpedomainjoin.xml") 
-
-    Dismount-WindowsImage -Path $offline.FullName -Save 
-
-    rmdir $offline -Recurse -Force
-} 
-
-Write-Host "Applying Unattend File - Success! Go Nano!"
-
-#Start-Sleep -s 300
-
-Write-Host "Setup Complete!"

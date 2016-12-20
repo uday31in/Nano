@@ -235,7 +235,7 @@ namespace ECGCAT
 
     public class WinPENanoDomainJoin
     {
-        public static string WinPE_DJoin(String machinename, String domain, String username, String password, String ou = null)
+        public static string WinPE_DJoin(String username, [Optional]String domain, String password, String machinename)
         {
             WindowsIdentity winId = WindowsIdentity.GetCurrent();
             //Console.WriteLine("Current User Identity : {0}", winId.Name);
@@ -250,6 +250,16 @@ namespace ECGCAT
             //define the handles
             IntPtr existingTokenHandle = IntPtr.Zero;
             IntPtr duplicateTokenHandle = IntPtr.Zero;
+
+           
+            if (username.IndexOf("\\") > 0)
+            {
+                //split domain and name
+                String[] splitUserName = username.Split('\\');
+                domain = splitUserName[0];
+                username = splitUserName[1];
+            }
+          
 
             try
             {
@@ -300,7 +310,6 @@ namespace ECGCAT
                 provisioningParams.lpDomain = domain;
                 provisioningParams.lpHostName = machinename;
                 provisioningParams.dwProvisionOptions = 2;
-                provisioningParams.lpMachineAccountOU = organizationalunit;
 
                 //IntPtr blob = new IntPtr();
                 //StringBuilder blob = new StringBuilder();
@@ -362,80 +371,22 @@ $result = Add-Type -TypeDefinition $Source -Language CSharp
 
 #$filename = "C:\RemoteInstall\WdsClientUnattend\Gen2NoCredential.xml"
 #$filename = "C:\RemoteInstall\WdsClientUnattend\Gen2NoCredNoComputer.xml"
-$filename = "x:\sources\wdsunattend\wdsunattend.xml"
+#$filename = "x:\sources\wdsunattend\wdsunattend.xml"
 Write-host "Reading Domain Join Information from $filename"
 
-$xml = New-Object -TypeName System.Xml.XmlDocument
-$xml.Load($filename)
+#$tsenv = New-Object -COMObject Microsoft.SMS.TSEnvironment
+$machinename = $args[0]
+$domain = $args[1]
+$user = $args[2]
+$password = $args[3]
+$OSDisk = $args[4]
 
-$offlineUnattendedJoin = (($xml.unattend.settings | Where-Object {$_.pass -eq "specialize"}).component | Where-Object {$_.name -eq "Microsoft-Windows-UnattendedJoin"})
-
-if($offlineUnattendedJoin -ne $null)
-{
-
-    Write-Host "Using Cashed Credential from $filename"
-
-    $offlineUnattendedJoin.Identification
-
-    $user = $offlineUnattendedJoin.Identification.Credentials.Username
-    $domain = $offlineUnattendedJoin.Identification.Credentials.Domain
-    $password = $offlineUnattendedJoin.Identification.Credentials.Password
-
-
+try{
+$offlinedomainblob = [ECGCAT.WinPENanoDomainJoin]::WinPE_DJoin( $user,$domain,$password , $machinename)
 }
-else
-{
-    Write-Host "No Credentials Found in $filename"
-    $credential = Get-Credential -Message "Enter Domain Credentials To Domain Join" 
-
-    $user = $credential.GetNetworkCredential().username 
-    $domain = $credential.GetNetworkCredential().Domain 
-    $password = $credential.GetNetworkCredential().password
-
+catch {
     
 }
-
-
-$shellsetup = (($xml.unattend.settings | Where-Object {$_.pass -eq "specialize"}).component | Where-Object {$_.name -eq "Microsoft-Windows-Shell-Setup"})
-
-if($shellsetup -ne $null)
-{
-    [string]$machinename = $shellsetup.ComputerName
-    
-    if($machinename -eq [string]::Empty)
-    {
-        Write-Host "No ComputerName Found in $filename"
-        $machinename = Read-Host "Domain Computername"
-    }
-    
-    Write-Host "Using ComputerName: $machinename"
-
-    #$machinename = 'Nano#'
-    if($machinename.Contains('#'))
-    {
-        $sb = [System.Text.StringBuilder] $machinename
-        ([regex]::Matches($machinename, "#" )) |% {
-            
-           $sb[$_.Index] = (Get-Random -Minimum 0 -Maximum 10).ToString()
-        }
-
-        [int]$length = ([regex]::Matches($machinename, "#" )).count
-
-        #$random = Get-Random -Minimum ([int]([math]::pow(10, ($length-1)))) -Maximum ([int](([math]::pow(10,$length))))
-        $machinename = $sb.ToString()
-         Write-Host "Using ComputerName: $machinename"
-    }
-   
-
-}
-
-$offlinedomainblob = [ECGCAT.WinPENanoDomainJoin]::WinPE_DJoin(
-    $machinename,
-    $domain,
-    $username,
-    $password, 
-    $null
-)
 Write-Host "Domain Blob Created Successfully: $offlinedomainblob"
 
 [string]$winpedomainjoin = @"
@@ -454,7 +405,7 @@ Write-Host "Domain Blob Created Successfully: $offlinedomainblob"
 "@ 
 
 
-
+try{
 $winpedomainjoinxml = New-Object -TypeName System.Xml.XmlDocument
 $winpedomainjoinxml.LoadXml($winpedomainjoin)
 
@@ -468,33 +419,18 @@ Write-Host "WinPE Domain Join Unattend File Created Successfully at " (join-path
 
 Write-Host "Applying Unattend File"
 
-$InstallVolume = (get-volume |? {$_.FileSystem -eq 'NTFS'} | sort-object SizeRemaining -Descending | select -First 1).DriveLetter
+$InstallVolume = $OSDisk.replace(':','') 
 
 if(Test-Path ($InstallVolume  + ":\windows"))
 {
-    Write-Host "Applying Unattend File at " ("$InstallVolume" + ":\") 
+    Write-Host "Applying Unattend File at $(("$InstallVolume" + ":\")) "
     Apply-WindowsUnattend -UnattendPath (join-path -path "$env:SystemDrive" -ChildPath "winpedomainjoin.xml") -Path ("$InstallVolume" + ":\")
 
 }
-else
-{
-    $vhdpath = Get-ChildItem ("$InstallVolume" + ":\WindowsImages") | Sort-Object -Descending LastWriteTime | select -First 1
-    Write-Host "Looking for VHD at $($vhdpath.Fullname)"
-
-    $vhd = Get-ChildItem $vhdpath.pspath | select -First 1 
-    Write-Host "Using $($vhd.fullname)"
-
-    $offline = mkdir ("$InstallVolume" + ":\offline")
-
-    Mount-WindowsImage -Path $offline.FullName -ImagePath $vhd.fullname -Index:1
-
-    Apply-WindowsUnattend -Path $offline.FullName -UnattendPath (join-path -path "$env:SystemDrive" -ChildPath "winpedomainjoin.xml") 
-
-    Dismount-WindowsImage -Path $offline.FullName -Save 
-
-    rmdir $offline -Recurse -Force
-} 
-
+}
+catch{
+    
+}
 Write-Host "Applying Unattend File - Success! Go Nano!"
 
 #Start-Sleep -s 300
