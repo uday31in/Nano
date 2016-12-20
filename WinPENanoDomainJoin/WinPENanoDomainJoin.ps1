@@ -235,7 +235,7 @@ namespace ECGCAT
 
     public class WinPENanoDomainJoin
     {
-        public static string WinPE_DJoin(String username, [Optional]String domain, String password, String machinename, String organizationalunit)
+        public static string WinPE_DJoin(String machinename, String domain, String username, String password, String ou = null)
         {
             WindowsIdentity winId = WindowsIdentity.GetCurrent();
             //Console.WriteLine("Current User Identity : {0}", winId.Name);
@@ -250,16 +250,6 @@ namespace ECGCAT
             //define the handles
             IntPtr existingTokenHandle = IntPtr.Zero;
             IntPtr duplicateTokenHandle = IntPtr.Zero;
-
-           
-            if (username.IndexOf("\\") > 0)
-            {
-                //split domain and name
-                String[] splitUserName = username.Split('\\');
-                domain = splitUserName[0];
-                username = splitUserName[1];
-            }
-          
 
             try
             {
@@ -439,10 +429,13 @@ if($shellsetup -ne $null)
 
 }
 
-
-
-$offlinedomainblob = [ECGCAT.WinPENanoDomainJoin]::WinPE_DJoin( $user,$domain,$password , $machinename)
-
+$offlinedomainblob = [ECGCAT.WinPENanoDomainJoin]::WinPE_DJoin(
+    $machinename,
+    $domain,
+    $username,
+    $password, 
+    $null
+)
 Write-Host "Domain Blob Created Successfully: $offlinedomainblob"
 
 [string]$winpedomainjoin = @"
